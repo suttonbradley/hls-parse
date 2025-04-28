@@ -1,0 +1,4 @@
+Fetch the following HLS playlist, parse the document, and sort it. You should
+group by tag type. Within each tag group you can pick which tag attribute(s)
+to support sorting by. Support sorting by 1-2 attribute types total.
+https://lw.bamgrid.com/2.0/hls/vod/bam/ms02/hls/dplus/bao/master_unenc_h
