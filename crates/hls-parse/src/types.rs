@@ -14,6 +14,8 @@ pub mod media {
         pub(crate) default: bool,
         pub(crate) auto_select: bool,
         pub(crate) channel_info: AudioChannelInfo,
+        /// URI of the audio stream the other metadata fields describe
+        // TODO: represent as http::uri::Uri ?
         pub(crate) uri: String,
     }
 
