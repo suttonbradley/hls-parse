@@ -17,7 +17,7 @@ use nom::{bytes::complete::tag, character::complete::multispace0};
 
 use crate::HlsPlaylist;
 use crate::types::media::Audio;
-use crate::types::stream_info::{Resolution, StreamInfo};
+use crate::types::stream_info::{Resolution, StreamInfo, StreamInfoCommon};
 
 type NomStrError<'a> = nom::error::Error<&'a str>;
 
@@ -137,6 +137,7 @@ fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             // Clear subsequent whitespace and newlines
             multispace0,
         ),
+        // Map specific parser outputs to struct fields
         |tuple| {
             Ok::<_, NomStrError<'a>>(HlsElement::Audio(Audio {
                 // TODO: clean up tuple to struct field matching
@@ -201,22 +202,42 @@ fn hls_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             // Clear subsequent whitespace and newlines
             multispace0,
         ),
+        // Map specific parser outputs to struct fields
         |tuple| {
             Ok::<_, NomStrError<'a>>(HlsElement::StreamInfo(StreamInfo {
-                bandwidth: tuple.3,
+                common: StreamInfoCommon {
+                    bandwidth: tuple.3,
+                    codecs: tuple.5,
+                    resolution: tuple.6,
+                    video_range: tuple.8.to_owned(),
+                    uri: tuple.13.to_owned(),
+                },
                 average_bandwidth: tuple.4,
-                codecs: tuple.5,
-                resolution: tuple.6,
                 frame_rate: tuple.7,
-                video_range: tuple.8.to_owned(),
                 audio_codec: tuple.9.to_owned(),
                 closed_captions: tuple.10.to_owned(),
-                uri: tuple.13.to_owned(),
             }))
         },
     )
     .parse(data)
 }
+
+// /// Parse HLS iframe stream
+// fn hls_iframe_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
+//     map_res(
+//         (
+//             // Parse "#EXT-X-I-FRAME-STREAM-INF:"
+//             extension_prefix(),
+//             tag("I-FRAME-STREAM-INF:"),
+//             space0,
+//         ),
+//         |tuple| {
+//             Ok::<_, NomStrError<'a>>(HlsElement::IframeStreamInfo(IframeStreamInfo {
+
+//             }))
+//         },
+//     )
+// }
 
 /// Represents the chars surrounding an HLS param, for flexibility parsing
 /// params of the form 'PARAM_NAME=<value>' that may be wrapped in quotes.

@@ -22,20 +22,26 @@ pub mod stream_info {
 
     use anyhow::Context;
 
+    /// Data related to all stream types (regular and iframe streams).
     #[derive(Debug, Default, PartialEq)]
-    pub struct StreamInfo {
+    pub struct StreamInfoCommon {
         pub(crate) bandwidth: usize,
-        pub(crate) average_bandwidth: usize,
-        // TODO: represent as struct
         pub(crate) codecs: Vec<String>,
         pub(crate) resolution: Resolution,
-        pub(crate) frame_rate: f32,
         pub(crate) video_range: String,
+        /// URI of the media playlist that other metadata fields describe
+        // TODO: represent as http::uri::Uri ?
+        pub(crate) uri: String,
+    }
+
+    #[derive(Debug, Default, PartialEq)]
+    pub struct StreamInfo {
+        pub(crate) common: StreamInfoCommon,
+        pub(crate) average_bandwidth: usize,
+        pub(crate) frame_rate: f32,
         // TODO: use enum of common audio formats?
         pub(crate) audio_codec: String,
         pub(crate) closed_captions: bool,
-        /// URI of the media playlist this struct holds metadata for
-        pub(crate) uri: String,
     }
 
     #[derive(Debug, Default, PartialEq)]
