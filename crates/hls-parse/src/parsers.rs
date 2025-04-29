@@ -156,8 +156,8 @@ enum ParamEnclose {
 }
 
 /// Given a param_name, returns a parser function that matches on
-/// '<param_name>=<value>,' and returns the parameter value. Ignores spaces.
-/// If `quote_wrapped`, expect <value> to be wrapped in double-quotes.
+/// '<param_name>=<value>,' and returns the parameter value. Tolerates spaces.
+/// Uses `enclosed_by` to parse delimiters surrounding the parameter value.
 fn comma_terminated_param<'a>(
     param_name: &'a str,
     enclosed_by: ParamEnclose,
