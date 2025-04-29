@@ -13,6 +13,7 @@ use std::str::FromStr;
 pub struct HlsPlaylist {
     audio_tracks: Vec<types::media::Audio>,
     streams: Vec<types::stream_info::StreamInfo>,
+    iframe_streams: Vec<types::stream_info::IframeStreamInfo>,
 }
 
 impl FromStr for HlsPlaylist {
@@ -28,7 +29,7 @@ impl FromStr for HlsPlaylist {
 #[cfg(test)]
 mod test {
     use crate::types::media::Audio;
-    use crate::types::stream_info::{Resolution, StreamInfo, StreamInfoCommon};
+    use crate::types::stream_info::{IframeStreamInfo, Resolution, StreamInfo, StreamInfoCommon};
 
     use super::*;
 
@@ -79,7 +80,7 @@ hdr10/unenc/1650k/vod.m3u8
                     codecs: vec!["mp4a.40.2".to_owned(), "hvc1.2.4.L90.90".to_owned()],
                     resolution: Resolution {
                         width: 960,
-                        height: 540
+                        height: 540,
                     },
                     video_range: "PQ".to_owned(),
                     uri: "hdr10/unenc/1650k/vod.m3u8".to_owned(),
@@ -88,6 +89,32 @@ hdr10/unenc/1650k/vod.m3u8
                 frame_rate: 23.97,
                 audio_codec: "aac-128k".to_owned(),
                 closed_captions: false,
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_iframe() {
+        let data = "#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=222552,CODECS=\"hvc1.2.4.L93.90\",RESOLUTION=1280x720,VIDEO-RANGE=PQ,URI=\"hdr10/unenc/3300k/vod-iframe.m3u8\"
+
+#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=77758,CODECS=\"hvc1.2.4.L63.90\",RESOLUTION=640x360,VIDEO-RANGE=PQ,URI=\"hdr10/unenc/900k/vod-iframe.m3u8\"
+";
+
+        let playlist = HlsPlaylist::from_str(data).unwrap();
+        println!("{playlist:?}");
+        assert_eq!(
+            playlist.iframe_streams[1],
+            IframeStreamInfo {
+                common: StreamInfoCommon {
+                    bandwidth: 77758,
+                    codecs: vec!["hvc1.2.4.L63.90".to_owned()],
+                    resolution: Resolution {
+                        width: 640,
+                        height: 360,
+                    },
+                    video_range: "PQ".to_owned(),
+                    uri: "hdr10/unenc/900k/vod-iframe.m3u8".to_owned(),
+                },
             }
         );
     }

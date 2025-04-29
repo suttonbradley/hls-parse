@@ -45,6 +45,11 @@ pub mod stream_info {
     }
 
     #[derive(Debug, Default, PartialEq)]
+    pub struct IframeStreamInfo {
+        pub(crate) common: StreamInfoCommon,
+    }
+
+    #[derive(Debug, Default, PartialEq)]
     pub(crate) struct Resolution {
         // TODO: could represent as enum of common resolutions
         // TODO: could store as u16, as max reasonable value is ~8k

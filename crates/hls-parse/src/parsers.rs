@@ -17,7 +17,7 @@ use nom::{bytes::complete::tag, character::complete::multispace0};
 
 use crate::HlsPlaylist;
 use crate::types::media::Audio;
-use crate::types::stream_info::{Resolution, StreamInfo, StreamInfoCommon};
+use crate::types::stream_info::{IframeStreamInfo, Resolution, StreamInfo, StreamInfoCommon};
 
 type NomStrError<'a> = nom::error::Error<&'a str>;
 
@@ -29,6 +29,7 @@ enum HlsElement {
     NoData,
     Audio(Audio),
     StreamInfo(StreamInfo),
+    IframeStreamInfo(IframeStreamInfo),
 }
 
 impl HlsElement {
@@ -38,6 +39,7 @@ impl HlsElement {
             HlsElement::NoData => (),
             HlsElement::Audio(x) => playlist.audio_tracks.push(x),
             HlsElement::StreamInfo(x) => playlist.streams.push(x),
+            HlsElement::IframeStreamInfo(x) => playlist.iframe_streams.push(x),
         }
     }
 }
@@ -54,6 +56,7 @@ pub(crate) fn parse_hls_playlist<'a>(data: &'a str) -> anyhow::Result<HlsPlaylis
         hls_param_independent_segments,
         hls_audio,
         hls_stream_info,
+        hls_iframe_stream_info,
     ))))
     .parse(data)
     {
@@ -164,7 +167,7 @@ fn hls_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             extension_prefix(),
             tag("STREAM-INF:"),
             space0,
-            // Parse parameters (BANDWIDTH=x, RESOLUTION=y, etc.). Some params are enclosed by quotes
+            // Parse parameters (BANDWIDTH=x, RESOLUTION=WxH, etc.). Some params are enclosed by quotes
             // and/or need conversion from the returned str value into another type.
             map_res(
                 comma_terminated_param("BANDWIDTH", ParamEnclose::None),
@@ -222,22 +225,51 @@ fn hls_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     .parse(data)
 }
 
-// /// Parse HLS iframe stream
-// fn hls_iframe_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
-//     map_res(
-//         (
-//             // Parse "#EXT-X-I-FRAME-STREAM-INF:"
-//             extension_prefix(),
-//             tag("I-FRAME-STREAM-INF:"),
-//             space0,
-//         ),
-//         |tuple| {
-//             Ok::<_, NomStrError<'a>>(HlsElement::IframeStreamInfo(IframeStreamInfo {
-
-//             }))
-//         },
-//     )
-// }
+/// Parse an HLS iframe stream (starts with #EXT-X-I-FRAME-STREAM-INF).
+/// Return a `HlsElement::IframeStreamInfo` that represents the parsed data.
+// NOTE: TODOs from hls_audio may apply here. Omitted to avoid redundancy.
+fn hls_iframe_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
+    map_res(
+        (
+            // Parse "#EXT-X-I-FRAME-STREAM-INF:"
+            extension_prefix(),
+            tag("I-FRAME-STREAM-INF:"),
+            space0,
+            // Parse parameters (BANDWIDTH=X, RESOLUTION=WxH, etc.). Some params are enclosed by quotes
+            // and/or need conversion from the returned str value into another type.
+            map_res(
+                comma_terminated_param("BANDWIDTH", ParamEnclose::None),
+                usize::from_str,
+            ),
+            map_res(
+                comma_terminated_param("CODECS", ParamEnclose::DoubleQuotes),
+                |s| {
+                    // Split codecs on ',' before storing
+                    Ok::<_, NomStrError<'a>>(s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>())
+                },
+            ),
+            map_res(
+                comma_terminated_param("RESOLUTION", ParamEnclose::None),
+                Resolution::from_str,
+            ),
+            comma_terminated_param("VIDEO-RANGE", ParamEnclose::None),
+            comma_terminated_param("URI", ParamEnclose::DoubleQuotes),
+            // Clear subsequent whitespace and newlines
+            multispace0,
+        ),
+        |tuple| {
+            Ok::<_, NomStrError<'a>>(HlsElement::IframeStreamInfo(IframeStreamInfo {
+                common: StreamInfoCommon {
+                    bandwidth: tuple.3,
+                    codecs: tuple.4,
+                    resolution: tuple.5,
+                    video_range: tuple.6.to_owned(),
+                    uri: tuple.7.to_owned(),
+                },
+            }))
+        },
+    ).parse(data)
+}
 
 /// Represents the chars surrounding an HLS param, for flexibility parsing
 /// params of the form 'PARAM_NAME=<value>' that may be wrapped in quotes.
