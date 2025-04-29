@@ -5,16 +5,20 @@
 //! As a rule of thumb, parsers in this module strip extra whitespace
 //! newlines to set up input for subsequent parsers.
 
+use std::str::FromStr;
+
 use nom::branch::alt;
 use nom::bytes::complete::{take_till, take_until};
-use nom::character::complete::space0;
-use nom::combinator::{all_consuming, map_res, opt};
+use nom::character::complete::{anychar, line_ending, newline, none_of, not_line_ending, space0};
+use nom::combinator::{all_consuming, map_res, opt, rest};
 use nom::multi::many1;
+use nom::sequence::{preceded, terminated};
 use nom::{IResult, Parser};
 use nom::{bytes::complete::tag, character::complete::multispace0};
 
 use crate::HlsPlaylist;
 use crate::types::media::Audio;
+use crate::types::stream_info::{Resolution, StreamInfo};
 
 type NomStrError<'a> = nom::error::Error<&'a str>;
 
@@ -25,6 +29,7 @@ type NomStrError<'a> = nom::error::Error<&'a str>;
 enum HlsElement {
     NoData,
     Audio(Audio),
+    StreamInfo(StreamInfo),
 }
 
 impl HlsElement {
@@ -32,7 +37,8 @@ impl HlsElement {
     fn add_to_playlist(self, playlist: &mut HlsPlaylist) {
         match self {
             HlsElement::NoData => (),
-            HlsElement::Audio(a) => playlist.audio_tracks.push(a),
+            HlsElement::Audio(x) => playlist.audio_tracks.push(x),
+            HlsElement::StreamInfo(x) => playlist.streams.push(x),
         }
     }
 }
@@ -46,8 +52,9 @@ pub(crate) fn parse_hls_playlist<'a>(data: &'a str) -> anyhow::Result<HlsPlaylis
     // By design of the parsing functions, at most one will succeed.
     let components = match all_consuming(many1(alt((
         hls_header,
-        hls_independent_segments,
+        hls_param_independent_segments,
         hls_audio,
+        hls_stream_info,
     ))))
     .parse(data)
     {
@@ -82,7 +89,7 @@ fn hls_header<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
 /// Parse an HLS independent segments param from the given string.
 /// Returns `HlsElement::NoData` on success. Modifies the input to "move past" the tag.
 // TODO: return and store this parameter?
-fn hls_independent_segments<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
+fn hls_param_independent_segments<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     // Toss parser results, converting to `HlsElement::NoData` instead.
     map_res(
         (
@@ -104,11 +111,11 @@ fn hls_independent_segments<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
 fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     map_res(
         (
-            // Parse "#EXT-X-MEDIA:"
+            // Parse "#EXT-X-MEDIA:TYPE=AUDIO,"
             extension_prefix(),
             tag("MEDIA:"),
             (space0, tag("TYPE=AUDIO"), space0, tag(",")),
-            // Parse HLS parameters (TYPE=AUDIO, GROUP-ID=foo, etc.). Some params will be enclosed by quotes
+            // Parse parameters (GROUP-ID=foo, NAME=bar, etc.). Some params are enclosed by quotes
             // and/or need conversion from the returned str value into another type.
             // TODO: some of the following, like GROUP-ID, could be converted to an
             //       enum given a known-good set of values, like audio codecs.
@@ -125,7 +132,7 @@ fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             ),
             map_res(
                 comma_terminated_param("CHANNELS", ParamEnclose::DoubleQuotes),
-                |s| s.parse::<usize>(),
+                usize::from_str,
             ),
             comma_terminated_param("URI", ParamEnclose::DoubleQuotes),
             // Clear subsequent whitespace and newlines
@@ -133,6 +140,7 @@ fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
         ),
         |tuple| {
             Ok::<_, NomStrError<'a>>(HlsElement::Audio(Audio {
+                // TODO: clean up tuple to struct field matching
                 group_id: tuple.3.to_owned(),
                 name: tuple.4.to_owned(),
                 language: tuple.5.to_owned(),
@@ -144,6 +152,73 @@ fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
         },
     )
     .parse(data)
+}
+
+/// TODO:
+// NOTE: TODOs from hls_audio may apply here. Omitted to avoid redundancy.
+fn hls_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
+    // TODO: remove print
+    let a = map_res(
+        (
+            // Parse "#EXT-X-STREAM-INF:"
+            extension_prefix(),
+            tag("STREAM-INF:"),
+            space0,
+            // Parse parameters (BANDWIDTH=x, RESOLUTION=y, etc.). Some params are enclosed by quotes
+            // and/or need conversion from the returned str value into another type.
+            map_res(
+                comma_terminated_param("BANDWIDTH", ParamEnclose::None),
+                usize::from_str,
+            ),
+            map_res(
+                comma_terminated_param("AVERAGE-BANDWIDTH", ParamEnclose::None),
+                usize::from_str,
+            ),
+            map_res(
+                comma_terminated_param("CODECS", ParamEnclose::DoubleQuotes),
+                |s| {
+                    // Split codecs on ',' before storing
+                    Ok::<_, NomStrError<'a>>(s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>())
+                },
+            ),
+            map_res(
+                comma_terminated_param("RESOLUTION", ParamEnclose::None),
+                Resolution::from_str,
+            ),
+            map_res(
+                comma_terminated_param("FRAME-RATE", ParamEnclose::None),
+                f32::from_str,
+            ),
+            comma_terminated_param("VIDEO-RANGE", ParamEnclose::None),
+            comma_terminated_param("AUDIO", ParamEnclose::DoubleQuotes),
+            map_res(
+                comma_terminated_param("CLOSED-CAPTIONS", ParamEnclose::None),
+                bool_from_cc_str,
+            ),
+            // Parse resource URI on the next line
+            space0,
+            newline,
+            not_line_ending,
+            // Clear subsequent whitespace and newlines
+            multispace0,
+        ),
+        |tuple| {
+            Ok::<_, NomStrError<'a>>(HlsElement::StreamInfo(StreamInfo {
+                bandwidth: tuple.3,
+                average_bandwidth: tuple.4,
+                codecs: tuple.5,
+                resolution: tuple.6,
+                frame_rate: tuple.7,
+                video_range: tuple.8.to_owned(),
+                audio_codec: tuple.9.to_owned(),
+                closed_captions: tuple.10.to_owned(),
+                uri: tuple.13.to_owned(),
+            }))
+        },
+    )
+    .parse(data);
+    println!("{a:?}");
+    a
 }
 
 /// Represents the chars surrounding an HLS param, for flexibility parsing
@@ -183,6 +258,7 @@ fn comma_terminated_param<'a>(
 
 /// Parse and return a parameter value with no enclosing quotes. Terminated at whitespace or comma.
 fn param_value_no_enclosure<'a>(data: &'a str) -> IResult<&'a str, &'a str, NomStrError<'a>> {
+    // Try whitespace- and comma-terminated parsers, using what works
     alt((
         take_until::<&'a str, &'a str, _>(","),
         take_till(|c: char| c.is_whitespace()),
@@ -192,6 +268,7 @@ fn param_value_no_enclosure<'a>(data: &'a str) -> IResult<&'a str, &'a str, NomS
 
 /// Parse and return a parameter value enclosed in double quotes.
 fn param_value_double_quoted<'a>(data: &'a str) -> IResult<&'a str, &'a str, NomStrError<'a>> {
+    // Map result to the parameter value returned by the middle parser.
     map_res(
         (
             tag("\""),
@@ -203,7 +280,7 @@ fn param_value_double_quoted<'a>(data: &'a str) -> IResult<&'a str, &'a str, Nom
     .parse(data)
 }
 
-/// Matches an HLS boolean parameter. Throws an error if not exactly YES or NO.
+/// Matches an HLS boolean parameter value. Throws an error if not exactly YES or NO.
 fn bool_from_param_str(s: &str) -> anyhow::Result<bool> {
     if s == "YES" {
         Ok(true)
@@ -211,5 +288,17 @@ fn bool_from_param_str(s: &str) -> anyhow::Result<bool> {
         Ok(false)
     } else {
         anyhow::bail!("could not match {s} to str repr of boolean value (YES/NO)")
+    }
+}
+
+/// Matches an HLS CLOSED-CAPTIONS parameter value. Throws an error if not exactly NONE or CC.
+// TODO: could only find references to these values. Ensure this list is exhaustive, represent with richer data type if not.
+fn bool_from_cc_str(s: &str) -> anyhow::Result<bool> {
+    if s == "CC" {
+        Ok(true)
+    } else if s == "NONE" {
+        Ok(false)
+    } else {
+        anyhow::bail!("could not match {s} to str repr of CLOSED-CAPTIONS param value (CC/NONE)")
     }
 }

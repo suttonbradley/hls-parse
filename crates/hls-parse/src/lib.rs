@@ -12,6 +12,7 @@ use std::str::FromStr;
 /// Represents a parsed HLS playlist, supporting various `#EXT-X-*` tags.
 pub struct HlsPlaylist {
     audio_tracks: Vec<types::media::Audio>,
+    streams: Vec<types::stream_info::StreamInfo>,
 }
 
 impl FromStr for HlsPlaylist {
@@ -27,11 +28,12 @@ impl FromStr for HlsPlaylist {
 #[cfg(test)]
 mod test {
     use crate::types::media::Audio;
+    use crate::types::stream_info::{Resolution, StreamInfo};
 
     use super::*;
 
     #[test]
-    fn test_parse() {
+    fn test_parse_audio() {
         let data = "#EXTM3U
 #EXT-X-INDEPENDENT-SEGMENTS
 
@@ -51,6 +53,36 @@ mod test {
                 auto_select: true,
                 channels: 2,
                 uri: "audio/unenc/aac_128k/vod.m3u8".to_owned(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_stream() {
+        let data = "#EXTM3U
+#EXT-X-INDEPENDENT-SEGMENTS
+
+#EXT-X-STREAM-INF:BANDWIDTH=2483789,AVERAGE-BANDWIDTH=1762745,CODECS=\"mp4a.40.2,hvc1.2.4.L90.90\",RESOLUTION=960x540,FRAME-RATE=23.97,VIDEO-RANGE=PQ,AUDIO=\"aac-128k\",CLOSED-CAPTIONS=NONE
+hdr10/unenc/1650k/vod.m3u8
+";
+
+        let playlist = HlsPlaylist::from_str(data).unwrap();
+        println!("{playlist:?}");
+        assert_eq!(
+            playlist.streams[0],
+            StreamInfo {
+                bandwidth: 2483789,
+                average_bandwidth: 1762745,
+                codecs: vec!["mp4a.40.2".to_owned(), "hvc1.2.4.L90.90".to_owned()],
+                resolution: Resolution {
+                    width: 960,
+                    height: 540
+                },
+                frame_rate: 23.97,
+                video_range: "PQ".to_owned(),
+                audio_codec: "aac-128k".to_owned(),
+                closed_captions: false,
+                uri: "hdr10/unenc/1650k/vod.m3u8".to_owned(),
             }
         );
     }
