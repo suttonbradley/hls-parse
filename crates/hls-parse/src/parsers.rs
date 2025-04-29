@@ -169,36 +169,24 @@ fn hls_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             space0,
             // Parse parameters (BANDWIDTH=x, RESOLUTION=WxH, etc.). Some params are enclosed by quotes
             // and/or need conversion from the returned str value into another type.
-            map_res(
-                comma_terminated_param("BANDWIDTH", ParamEnclose::None),
-                usize::from_str,
-            ),
+            stream_param_bandwidth,
             map_res(
                 comma_terminated_param("AVERAGE-BANDWIDTH", ParamEnclose::None),
                 usize::from_str,
             ),
-            map_res(
-                comma_terminated_param("CODECS", ParamEnclose::DoubleQuotes),
-                |s| {
-                    // Split codecs on ',' before storing
-                    Ok::<_, NomStrError<'a>>(s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>())
-                },
-            ),
-            map_res(
-                comma_terminated_param("RESOLUTION", ParamEnclose::None),
-                Resolution::from_str,
-            ),
+            stream_param_codec,
+            stream_param_resolution,
             map_res(
                 comma_terminated_param("FRAME-RATE", ParamEnclose::None),
                 f32::from_str,
             ),
-            comma_terminated_param("VIDEO-RANGE", ParamEnclose::None),
+            stream_param_video_range,
             comma_terminated_param("AUDIO", ParamEnclose::DoubleQuotes),
             map_res(
                 comma_terminated_param("CLOSED-CAPTIONS", ParamEnclose::None),
                 bool_from_cc_str,
             ),
-            // Parse resource URI on the next line
+            // Parse resource URI expected on the next line
             space0,
             newline,
             not_line_ending,
@@ -237,22 +225,10 @@ fn hls_iframe_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             space0,
             // Parse parameters (BANDWIDTH=X, RESOLUTION=WxH, etc.). Some params are enclosed by quotes
             // and/or need conversion from the returned str value into another type.
-            map_res(
-                comma_terminated_param("BANDWIDTH", ParamEnclose::None),
-                usize::from_str,
-            ),
-            map_res(
-                comma_terminated_param("CODECS", ParamEnclose::DoubleQuotes),
-                |s| {
-                    // Split codecs on ',' before storing
-                    Ok::<_, NomStrError<'a>>(s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>())
-                },
-            ),
-            map_res(
-                comma_terminated_param("RESOLUTION", ParamEnclose::None),
-                Resolution::from_str,
-            ),
-            comma_terminated_param("VIDEO-RANGE", ParamEnclose::None),
+            stream_param_bandwidth,
+            stream_param_codec,
+            stream_param_resolution,
+            stream_param_video_range,
             comma_terminated_param("URI", ParamEnclose::DoubleQuotes),
             // Clear subsequent whitespace/newlines/eof
             multispace0,
@@ -271,6 +247,8 @@ fn hls_iframe_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     )
     .parse(data)
 }
+
+// ---------- Functions and utilities for parsing HLS parameters ----------
 
 /// Represents the chars surrounding an HLS param, for flexibility parsing
 /// params of the form 'PARAM_NAME=<value>' that may be wrapped in quotes.
@@ -326,6 +304,44 @@ fn param_value_double_quoted<'a>(data: &'a str) -> IResult<&'a str, &'a str, Nom
     )
     .parse(data)
 }
+
+// ---------- Functions for fields common to various stream types ----------
+
+/// Parse BANDWIDTH param and convert to usize.
+fn stream_param_bandwidth<'a>(data: &'a str) -> IResult<&'a str, usize, NomStrError<'a>> {
+    map_res(
+        comma_terminated_param("BANDWIDTH", ParamEnclose::None),
+        usize::from_str,
+    )
+    .parse(data)
+}
+
+// Parse CODEC param and convert to list of owned codec Strings.
+fn stream_param_codec<'a>(data: &'a str) -> IResult<&'a str, Vec<String>, NomStrError<'a>> {
+    map_res(
+        comma_terminated_param("CODECS", ParamEnclose::DoubleQuotes),
+        |s| {
+            // Split codecs on ',' before storing
+            Ok::<_, NomStrError<'a>>(s.split(',').map(|s| s.to_owned()).collect::<Vec<_>>())
+        },
+    )
+    .parse(data)
+}
+
+// Parse RESOLUTION param and convert to `Resolution`.
+fn stream_param_resolution<'a>(data: &'a str) -> IResult<&'a str, Resolution, NomStrError<'a>> {
+    map_res(
+        comma_terminated_param("RESOLUTION", ParamEnclose::None),
+        Resolution::from_str,
+    )
+    .parse(data)
+}
+
+fn stream_param_video_range<'a>(data: &'a str) -> IResult<&'a str, &'a str, NomStrError<'a>> {
+    comma_terminated_param("VIDEO-RANGE", ParamEnclose::None).parse(data)
+}
+
+// ---------- Functions to convert various boolean parameters from strings ----------
 
 /// Matches an HLS boolean parameter value. Throws an error if not exactly YES or NO.
 fn bool_from_param_str(s: &str) -> anyhow::Result<bool> {
