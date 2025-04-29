@@ -9,10 +9,9 @@ use std::str::FromStr;
 
 use nom::branch::alt;
 use nom::bytes::complete::{take_till, take_until};
-use nom::character::complete::{anychar, line_ending, newline, none_of, not_line_ending, space0};
-use nom::combinator::{all_consuming, map_res, opt, rest};
+use nom::character::complete::{newline, not_line_ending, space0};
+use nom::combinator::{all_consuming, map_res, opt};
 use nom::multi::many1;
-use nom::sequence::{preceded, terminated};
 use nom::{IResult, Parser};
 use nom::{bytes::complete::tag, character::complete::multispace0};
 
@@ -104,8 +103,8 @@ fn hls_param_independent_segments<'a>(data: &'a str) -> IResult<&'a str, HlsElem
     .parse(data)
 }
 
-/// Parse a  line starting with #EXT-X-MEDIA with a TYPE=AUDIO tag.
-/// Return `Audio` that represents the parsed data.
+/// Parse HLS audio media (starts with #EXT-X-MEDIA, contains TYPE=AUDIO param).
+/// Return a `HlsElement::Audio` that represents the parsed data.
 // TODO: support subtitle variants
 // TODO: support varied tag ordering using `alt` parser
 fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
@@ -154,11 +153,11 @@ fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     .parse(data)
 }
 
-/// TODO:
+/// Parse an HLS stream (starts with #EXT-X-STREAM-INF).
+/// Return a `HlsElement::StreamInfo` that represents the parsed data.
 // NOTE: TODOs from hls_audio may apply here. Omitted to avoid redundancy.
 fn hls_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
-    // TODO: remove print
-    let a = map_res(
+    map_res(
         (
             // Parse "#EXT-X-STREAM-INF:"
             extension_prefix(),
@@ -216,9 +215,7 @@ fn hls_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             }))
         },
     )
-    .parse(data);
-    println!("{a:?}");
-    a
+    .parse(data)
 }
 
 /// Represents the chars surrounding an HLS param, for flexibility parsing
