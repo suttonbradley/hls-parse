@@ -45,7 +45,6 @@ mod test {
             Path::new(manifest_dir.as_str()).join(Path::new("test-fixtures/sample-input.txt"));
         let data = std::fs::read_to_string(file_path).expect("failed to read sample input file");
 
-        // TODO: use this instead
         let playlist = HlsPlaylist::from_str(data.as_str()).unwrap();
         assert_eq!(playlist.audio_tracks.len(), 4);
         assert_eq!(playlist.streams.len(), 36);
