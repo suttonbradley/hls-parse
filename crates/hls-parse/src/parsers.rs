@@ -16,7 +16,7 @@ use nom::{IResult, Parser};
 use nom::{bytes::complete::tag, character::complete::multispace0};
 
 use crate::HlsPlaylist;
-use crate::types::media::Audio;
+use crate::types::media::{Audio, AudioChannelInfo};
 use crate::types::stream_info::{IframeStreamInfo, Resolution, StreamInfo, StreamInfoCommon};
 
 type NomStrError<'a> = nom::error::Error<&'a str>;
@@ -62,7 +62,7 @@ pub(crate) fn parse_hls_playlist<'a>(data: &'a str) -> anyhow::Result<HlsPlaylis
     {
         Ok((_, components)) => components,
         // TODO: ensure this works
-        Err(e) => anyhow::bail!("{e:?}"),
+        Err(e) => anyhow::bail!("{e}"),
     };
     for elt in components {
         elt.add_to_playlist(&mut res);
@@ -98,7 +98,7 @@ fn hls_param_independent_segments<'a>(data: &'a str) -> IResult<&'a str, HlsElem
             // Parse #EXT-X-INDEPENDENT-SEGMENTS
             extension_prefix(),
             tag("INDEPENDENT-SEGMENTS"),
-            // Clear subsequent whitespace and newlines
+            // Clear subsequent whitespace/newlines/eof
             multispace0,
         ),
         |_| Ok::<_, NomStrError>(HlsElement::NoData),
@@ -134,10 +134,10 @@ fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             ),
             map_res(
                 comma_terminated_param("CHANNELS", ParamEnclose::DoubleQuotes),
-                usize::from_str,
+                AudioChannelInfo::from_str,
             ),
             comma_terminated_param("URI", ParamEnclose::DoubleQuotes),
-            // Clear subsequent whitespace and newlines
+            // Clear subsequent whitespace/newlines/eof
             multispace0,
         ),
         // Map specific parser outputs to struct fields
@@ -149,7 +149,7 @@ fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
                 language: tuple.5.to_owned(),
                 default: tuple.6,
                 auto_select: tuple.7,
-                channels: tuple.8,
+                channel_info: tuple.8,
                 uri: tuple.9.to_owned(),
             }))
         },
@@ -202,7 +202,7 @@ fn hls_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             space0,
             newline,
             not_line_ending,
-            // Clear subsequent whitespace and newlines
+            // Clear subsequent whitespace/newlines/eof
             multispace0,
         ),
         // Map specific parser outputs to struct fields
@@ -254,7 +254,7 @@ fn hls_iframe_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
             ),
             comma_terminated_param("VIDEO-RANGE", ParamEnclose::None),
             comma_terminated_param("URI", ParamEnclose::DoubleQuotes),
-            // Clear subsequent whitespace and newlines
+            // Clear subsequent whitespace/newlines/eof
             multispace0,
         ),
         |tuple| {
@@ -268,7 +268,8 @@ fn hls_iframe_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
                 },
             }))
         },
-    ).parse(data)
+    )
+    .parse(data)
 }
 
 /// Represents the chars surrounding an HLS param, for flexibility parsing
@@ -309,11 +310,7 @@ fn comma_terminated_param<'a>(
 /// Parse and return a parameter value with no enclosing quotes. Terminated at whitespace or comma.
 fn param_value_no_enclosure<'a>(data: &'a str) -> IResult<&'a str, &'a str, NomStrError<'a>> {
     // Try whitespace- and comma-terminated parsers, using what works
-    alt((
-        take_until::<&'a str, &'a str, _>(","),
-        take_till(|c: char| c.is_whitespace()),
-    ))
-    .parse(data)
+    alt((take_till(|c: char| c == ',' || c.is_whitespace()),)).parse(data)
 }
 
 /// Parse and return a parameter value enclosed in double quotes.

@@ -2,6 +2,10 @@
 
 // Types of media under tag #EXT-X-MEDIA
 pub mod media {
+    use std::str::FromStr;
+
+    use anyhow::Context;
+
     #[derive(Debug, PartialEq)]
     pub struct Audio {
         pub(crate) group_id: String,
@@ -9,8 +13,29 @@ pub mod media {
         pub(crate) language: String,
         pub(crate) default: bool,
         pub(crate) auto_select: bool,
-        pub(crate) channels: usize,
+        pub(crate) channel_info: AudioChannelInfo,
         pub(crate) uri: String,
+    }
+
+    #[derive(Debug, PartialEq)]
+    pub struct AudioChannelInfo {
+        pub(crate) channels: usize,
+        pub(crate) joc: bool,
+    }
+
+    impl FromStr for AudioChannelInfo {
+        type Err = anyhow::Error;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            // Detect optional "/JOC" on channels string
+            let split = s.split('/').collect::<Vec<_>>();
+            Ok(Self {
+                channels: split[0]
+                    .parse::<usize>()
+                    .with_context(|| format!("failed to parse channel count: {}", split[0]))?,
+                joc: split.len() > 1 && split[1] == "JOC",
+            })
+        }
     }
 
     // TODO: implement subtitles
@@ -66,12 +91,10 @@ pub mod stream_info {
             Ok(Self {
                 width: split[0]
                     .parse::<usize>()
-                    .with_context(|| format!("failed to parse pixed width: {}", split[0]))?
-                    .to_owned(),
+                    .with_context(|| format!("failed to parse pixed width: {}", split[0]))?,
                 height: split[1]
                     .parse::<usize>()
-                    .with_context(|| format!("failed to parse pixed height: {}", split[1]))?
-                    .to_owned(),
+                    .with_context(|| format!("failed to parse pixed height: {}", split[1]))?,
             })
         }
     }
