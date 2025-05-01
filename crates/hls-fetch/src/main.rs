@@ -68,7 +68,8 @@ fn main() -> anyhow::Result<()> {
         playlist.audio_streams.inner.sort_by(sort_fn);
     }
 
-    // NOTE: Could enlighten the parser lib to sorting, reducing the code duplication below.
+    // TODO: Could reduce code duplication below by implementing a trait that returns &StreamInfoCommon for various
+    //       video stream types, then converting `VideoSort` to a matching sorting function that takes &StreamInfoCommon.
     if let Some(sorter) = args.sort_video {
         let sort_fn = match sorter {
             VideoSort::Bandwidth => {
