@@ -6,14 +6,26 @@
 mod parsers;
 mod types;
 
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 #[derive(Default, Debug)]
 /// Represents a parsed HLS playlist, supporting various `#EXT-X-*` extensions.
 pub struct HlsPlaylist {
-    audio_tracks: Vec<types::media::Audio>,
-    streams: Vec<types::stream_info::StreamInfo>,
-    iframe_streams: Vec<types::stream_info::IframeStreamInfo>,
+    // FIXME: These fields contain `Vec`s wrapped in other types, in order to impl std::fmt::Display.
+    //        Unwrap these, for ergonomics (avoid `.inner`), and custom-implement the display of these types.
+    pub audio_streams: types::media::AudioStreams,
+    pub streams: types::stream_info::Streams,
+    pub iframe_streams: types::stream_info::IframeStreams,
+}
+
+impl Display for HlsPlaylist {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}\n{}\n{}",
+            self.audio_streams, self.streams, self.iframe_streams
+        )
+    }
 }
 
 impl FromStr for HlsPlaylist {
@@ -46,9 +58,9 @@ mod test {
         let data = std::fs::read_to_string(file_path).expect("failed to read sample input file");
 
         let playlist = HlsPlaylist::from_str(data.as_str()).unwrap();
-        assert_eq!(playlist.audio_tracks.len(), 4);
-        assert_eq!(playlist.streams.len(), 36);
-        assert_eq!(playlist.iframe_streams.len(), 2);
+        assert_eq!(playlist.audio_streams.inner.len(), 4);
+        assert_eq!(playlist.streams.inner.len(), 36);
+        assert_eq!(playlist.iframe_streams.inner.len(), 2);
     }
 
     /// Parse basic elements that don't return structured data.
@@ -72,7 +84,7 @@ mod test {
         let playlist = HlsPlaylist::from_str(data).unwrap();
         println!("{playlist:?}");
         assert_eq!(
-            playlist.audio_tracks[0],
+            playlist.audio_streams.inner[0],
             Audio {
                 group_id: "aac-128k".to_owned(),
                 name: "English".to_owned(),
@@ -86,7 +98,7 @@ mod test {
                 uri: "audio/unenc/aac_128k/vod.m3u8".to_owned(),
             }
         );
-        assert!(playlist.audio_tracks[2].channel_info.joc);
+        assert!(playlist.audio_streams.inner[2].channel_info.joc);
     }
 
     /// Parse stream data only.
@@ -101,7 +113,7 @@ hdr10/unenc/10000k/vod.m3u8
         let playlist = HlsPlaylist::from_str(data).unwrap();
         println!("{playlist:?}");
         assert_eq!(
-            playlist.streams[0],
+            playlist.streams.inner[0],
             StreamInfo {
                 common: StreamInfoCommon {
                     bandwidth: 2483789,
@@ -132,7 +144,7 @@ hdr10/unenc/10000k/vod.m3u8
         let playlist = HlsPlaylist::from_str(data).unwrap();
         println!("{playlist:?}");
         assert_eq!(
-            playlist.iframe_streams[1],
+            playlist.iframe_streams.inner[1],
             IframeStreamInfo {
                 common: StreamInfoCommon {
                     bandwidth: 77758,

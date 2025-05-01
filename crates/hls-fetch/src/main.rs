@@ -11,7 +11,7 @@ fn main() -> anyhow::Result<()> {
     .text()?;
 
     let playlist = HlsPlaylist::from_str(hls_raw_data.as_str())?;
-    println!("{playlist:?}");
+    println!("{}", playlist);
 
     Ok(())
 }

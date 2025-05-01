@@ -37,9 +37,9 @@ impl HlsElement {
     fn add_to_playlist(self, playlist: &mut HlsPlaylist) {
         match self {
             HlsElement::NoData => (),
-            HlsElement::Audio(x) => playlist.audio_tracks.push(x),
-            HlsElement::StreamInfo(x) => playlist.streams.push(x),
-            HlsElement::IframeStreamInfo(x) => playlist.iframe_streams.push(x),
+            HlsElement::Audio(x) => playlist.audio_streams.inner.push(x),
+            HlsElement::StreamInfo(x) => playlist.streams.inner.push(x),
+            HlsElement::IframeStreamInfo(x) => playlist.iframe_streams.inner.push(x),
         }
     }
 }

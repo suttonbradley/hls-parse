@@ -2,9 +2,30 @@
 
 // Types of media under tag #EXT-X-MEDIA
 pub mod media {
-    use std::str::FromStr;
+    use std::{fmt::Display, str::FromStr};
 
     use anyhow::Context;
+
+    #[derive(Debug, Default)]
+    pub struct AudioStreams {
+        pub inner: Vec<Audio>,
+    }
+
+    impl Display for AudioStreams {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            writeln!(f, "Audio Streams")?;
+            writeln!(f, "-------------")?;
+            writeln!(
+                f,
+                "| {:^10} | {:^10} | {:^10} | {:^7} | {:^10} | {:^8} | {:^35} |",
+                "GROUP-ID", "NAME", "LANGUAGE", "DEFAULT", "AUTOSELECT", "CHANNELS", "URI"
+            )?;
+            for i in self.inner.iter() {
+                writeln!(f, "{i}")?;
+            }
+            Ok(())
+        }
+    }
 
     #[derive(Debug, PartialEq)]
     pub struct Audio {
@@ -17,12 +38,6 @@ pub mod media {
         /// URI of the audio stream the other metadata fields describe
         // TODO: represent as http::uri::Uri ?
         pub(crate) uri: String,
-    }
-
-    #[derive(Debug, PartialEq)]
-    pub struct AudioChannelInfo {
-        pub(crate) channels: usize,
-        pub(crate) joc: bool,
     }
 
     impl FromStr for AudioChannelInfo {
@@ -40,12 +55,44 @@ pub mod media {
         }
     }
 
+    impl Display for Audio {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(
+                f,
+                "| {:^10} | {:^10} | {:^10} | {:^7} | {:^10} | {} | {:^35} |",
+                self.group_id,
+                self.name,
+                self.language,
+                self.default,
+                self.auto_select,
+                self.channel_info,
+                self.uri
+            )
+        }
+    }
+
+    #[derive(Debug, PartialEq)]
+    pub struct AudioChannelInfo {
+        pub(crate) channels: usize,
+        pub(crate) joc: bool,
+    }
+
+    impl Display for AudioChannelInfo {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(
+                f,
+                "{:^8}",
+                format!("{}{}", self.channels, if self.joc { "/JOC" } else { "" })
+            )
+        }
+    }
+
     // TODO: implement subtitles
 }
 
 // Types for parsing #EXT-X-STREAM-INF
 pub mod stream_info {
-    use std::str::FromStr;
+    use std::{fmt::Display, str::FromStr};
 
     use anyhow::Context;
 
@@ -61,6 +108,35 @@ pub mod stream_info {
         pub(crate) uri: String,
     }
 
+    #[derive(Debug, Default)]
+    pub struct Streams {
+        pub inner: Vec<StreamInfo>,
+    }
+
+    impl Display for Streams {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            writeln!(f, "Video Streams")?;
+            writeln!(f, "-------------")?;
+            writeln!(
+                f,
+                "| {:^10} | {:^17} | {:^30} | {:^11} | {:^10} | {:^11} | {:^10} | {:^15} | {:^30} |",
+                "BANDWIDTH",
+                "AVERAGE-BANDWIDTH",
+                "CODECS",
+                "RESOLUTION",
+                "FRAME-RATE",
+                "VIDEO-RANGE",
+                "AUDIO",
+                "CLOSED-CAPTIONS",
+                "URI"
+            )?;
+            for i in self.inner.iter() {
+                writeln!(f, "{i}")?;
+            }
+            Ok(())
+        }
+    }
+
     #[derive(Debug, Default, PartialEq)]
     pub struct StreamInfo {
         pub(crate) common: StreamInfoCommon,
@@ -71,9 +147,62 @@ pub mod stream_info {
         pub(crate) closed_captions: bool,
     }
 
+    impl Display for StreamInfo {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(
+                f,
+                "| {:^10} | {:^17} | {:^30} | {} | {:^10} | {:^11} | {:^10} | {:^15} | {:^30} |",
+                self.common.bandwidth,
+                self.average_bandwidth,
+                self.common.codecs.join(", "),
+                self.common.resolution,
+                self.frame_rate,
+                self.common.video_range,
+                self.audio_codec,
+                self.closed_captions,
+                self.common.uri
+            )
+        }
+    }
+
+    #[derive(Debug, Default)]
+    pub struct IframeStreams {
+        pub inner: Vec<IframeStreamInfo>,
+    }
+
+    impl Display for IframeStreams {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            writeln!(f, "IFrame Streams")?;
+            writeln!(f, "--------------")?;
+            writeln!(
+                f,
+                "| {:^10} | {:^30} | {:^11} | {:^11} | {:^35} |",
+                "BANDWIDTH", "CODECS", "RESOLUTION", "VIDEO-RANGE", "URI"
+            )?;
+            for i in self.inner.iter() {
+                writeln!(f, "{i}")?;
+            }
+            Ok(())
+        }
+    }
+
     #[derive(Debug, Default, PartialEq)]
     pub struct IframeStreamInfo {
         pub(crate) common: StreamInfoCommon,
+    }
+
+    impl Display for IframeStreamInfo {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(
+                f,
+                "| {:^10} | {:^30} | {} | {:^11} | {:^35} |",
+                self.common.bandwidth,
+                self.common.codecs.join(", "),
+                self.common.resolution,
+                self.common.video_range,
+                self.common.uri
+            )
+        }
     }
 
     #[derive(Debug, Default, PartialEq)]
@@ -98,6 +227,12 @@ pub mod stream_info {
                     .parse::<usize>()
                     .with_context(|| format!("failed to parse pixed height: {}", split[1]))?,
             })
+        }
+    }
+
+    impl Display for Resolution {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{:>5}x{:<5}", self.width, self.height)
         }
     }
 }
