@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use nom::branch::alt;
 use nom::bytes::complete::{take_till, take_until};
-use nom::character::complete::{newline, not_line_ending, space0};
+use nom::character::complete::{digit1, newline, not_line_ending, space0};
 use nom::combinator::{all_consuming, map_res, opt};
 use nom::multi::many1;
 use nom::{IResult, Parser};
@@ -30,6 +30,7 @@ enum HlsElement {
     Audio(Audio),
     StreamInfo(StreamInfo),
     IframeStreamInfo(IframeStreamInfo),
+    Version(usize),
 }
 
 impl HlsElement {
@@ -40,6 +41,7 @@ impl HlsElement {
             HlsElement::Audio(x) => playlist.audio_streams.inner.push(x),
             HlsElement::StreamInfo(x) => playlist.streams.inner.push(x),
             HlsElement::IframeStreamInfo(x) => playlist.iframe_streams.inner.push(x),
+            HlsElement::Version(v) => playlist.version = v,
         }
     }
 }
@@ -52,11 +54,13 @@ pub(crate) fn parse_hls_playlist<'a>(data: &'a str) -> anyhow::Result<HlsPlaylis
     // Try using all available parsing functions below, collecting the `HlsElement`s returned by successful parsers.
     // By design of the parsing functions, at most one will succeed.
     let components = match all_consuming(many1(alt((
-        hls_header,
-        hls_param_independent_segments,
-        hls_audio,
+        // Small optimization: roughly ordered by expected frequency (descending)
         hls_stream_info,
         hls_iframe_stream_info,
+        hls_audio,
+        hls_version,
+        hls_independent_segments,
+        hls_header,
     ))))
     .parse(data)
     {
@@ -91,7 +95,7 @@ fn hls_header<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
 /// Parse an HLS independent segments param from the given string.
 /// Returns `HlsElement::NoData` on success. Modifies the input to "move past" the tag.
 // TODO: return and store this parameter?
-fn hls_param_independent_segments<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
+fn hls_independent_segments<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     // Toss parser results, converting to `HlsElement::NoData` instead.
     map_res(
         (
@@ -102,6 +106,22 @@ fn hls_param_independent_segments<'a>(data: &'a str) -> IResult<&'a str, HlsElem
             multispace0,
         ),
         |_| Ok::<_, NomStrError>(HlsElement::NoData),
+    )
+    .parse(data)
+}
+
+fn hls_version<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
+    // Toss parser results, converting to `HlsElement::NoData` instead.
+    map_res(
+        (
+            // Parse #EXT-X-VERSION:<num>
+            extension_prefix(),
+            tag("VERSION:"),
+            map_res(digit1, usize::from_str),
+            // Clear subsequent whitespace/newlines/eof
+            multispace0,
+        ),
+        |(_, _, v, _)| Ok::<_, NomStrError>(HlsElement::Version(v)),
     )
     .parse(data)
 }

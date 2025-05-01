@@ -16,6 +16,8 @@ pub struct HlsPlaylist {
     pub audio_streams: types::media::AudioStreams,
     pub streams: types::stream_info::Streams,
     pub iframe_streams: types::stream_info::IframeStreams,
+    /// Playlist protocol version
+    pub version: usize,
 }
 
 impl Display for HlsPlaylist {
@@ -70,6 +72,15 @@ mod test {
 #EXT-X-INDEPENDENT-SEGMENTS
 ";
         let _ = HlsPlaylist::from_str(data).unwrap();
+    }
+
+    /// Parse basic elements that don't return structured data.
+    #[test]
+    fn test_parse_version() {
+        let data = "#EXT-X-VERSION:5
+";
+        let playlist = HlsPlaylist::from_str(data).unwrap();
+        assert_eq!(playlist.version, 5);
     }
 
     /// Parse audio media data only.

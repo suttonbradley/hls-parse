@@ -14,7 +14,7 @@ const DEFAULT_HLS_URL: &'static str =
     "https://lw.bamgrid.com/2.0/hls/vod/bam/ms02/hls/dplus/bao/master_unenc_hdr10_all.m3u8";
 const CLAP_HELP: &'static str =
     "A simple viewing/sorting tool for HLS playlists fetched from a URL.
-When no sort is selected for a given tag type, order appears as-parsed from the playlist.";
+When no sort is selected for a given tag type, results are ordered as they appear in the raw HLS playlist.";
 
 #[derive(Parser)]
 #[command(about = CLAP_HELP)]
