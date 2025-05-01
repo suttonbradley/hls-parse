@@ -1,0 +1,2 @@
+[alias]
+run-parser = "run --manifest-path ./crates/hls-sort/Cargo.toml"
