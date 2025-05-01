@@ -4,7 +4,7 @@
 //! and functions to parse raw data into those types.
 
 mod parsers;
-mod types;
+pub mod types;
 
 use std::{fmt::Display, str::FromStr};
 

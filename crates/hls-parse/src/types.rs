@@ -29,15 +29,15 @@ pub mod media {
 
     #[derive(Debug, PartialEq)]
     pub struct Audio {
-        pub(crate) group_id: String,
-        pub(crate) name: String,
-        pub(crate) language: String,
-        pub(crate) default: bool,
-        pub(crate) auto_select: bool,
-        pub(crate) channel_info: AudioChannelInfo,
+        pub group_id: String,
+        pub name: String,
+        pub language: String,
+        pub default: bool,
+        pub auto_select: bool,
+        pub channel_info: AudioChannelInfo,
         /// URI of the audio stream the other metadata fields describe
         // TODO: represent as http::uri::Uri ?
-        pub(crate) uri: String,
+        pub uri: String,
     }
 
     impl FromStr for AudioChannelInfo {
@@ -71,10 +71,10 @@ pub mod media {
         }
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, Eq, PartialEq, PartialOrd)]
     pub struct AudioChannelInfo {
-        pub(crate) channels: usize,
-        pub(crate) joc: bool,
+        pub channels: usize,
+        pub joc: bool,
     }
 
     impl Display for AudioChannelInfo {
@@ -84,6 +84,19 @@ pub mod media {
                 "{:^8}",
                 format!("{}{}", self.channels, if self.joc { "/JOC" } else { "" })
             )
+        }
+    }
+
+    impl Ord for AudioChannelInfo {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            // Sort by channels first, breaking tie on joc
+            if self.channels < other.channels {
+                std::cmp::Ordering::Less
+            } else if self.channels > other.channels {
+                std::cmp::Ordering::Greater
+            } else {
+                self.joc.cmp(&other.joc)
+            }
         }
     }
 
@@ -99,13 +112,13 @@ pub mod stream_info {
     /// Data related to all stream types (regular and iframe streams).
     #[derive(Debug, Default, PartialEq)]
     pub struct StreamInfoCommon {
-        pub(crate) bandwidth: usize,
-        pub(crate) codecs: Vec<String>,
-        pub(crate) resolution: Resolution,
-        pub(crate) video_range: String,
+        pub bandwidth: usize,
+        pub codecs: Vec<String>,
+        pub resolution: Resolution,
+        pub video_range: String,
         /// URI of the media playlist that other metadata fields describe
         // TODO: represent as http::uri::Uri ?
-        pub(crate) uri: String,
+        pub uri: String,
     }
 
     #[derive(Debug, Default)]
@@ -139,12 +152,12 @@ pub mod stream_info {
 
     #[derive(Debug, Default, PartialEq)]
     pub struct StreamInfo {
-        pub(crate) common: StreamInfoCommon,
-        pub(crate) average_bandwidth: usize,
-        pub(crate) frame_rate: f32,
+        pub common: StreamInfoCommon,
+        pub average_bandwidth: usize,
+        pub frame_rate: f32,
         // TODO: use enum of common audio formats?
-        pub(crate) audio_codec: String,
-        pub(crate) closed_captions: bool,
+        pub audio_codec: String,
+        pub closed_captions: bool,
     }
 
     impl Display for StreamInfo {
@@ -188,7 +201,7 @@ pub mod stream_info {
 
     #[derive(Debug, Default, PartialEq)]
     pub struct IframeStreamInfo {
-        pub(crate) common: StreamInfoCommon,
+        pub common: StreamInfoCommon,
     }
 
     impl Display for IframeStreamInfo {
@@ -205,12 +218,12 @@ pub mod stream_info {
         }
     }
 
-    #[derive(Debug, Default, PartialEq)]
-    pub(crate) struct Resolution {
+    #[derive(Debug, Default, Eq, PartialEq, PartialOrd)]
+    pub struct Resolution {
         // TODO: could represent as enum of common resolutions
         // TODO: could store as u16, as max reasonable value is ~8k
-        pub(crate) width: usize,
-        pub(crate) height: usize,
+        pub width: usize,
+        pub height: usize,
     }
 
     impl FromStr for Resolution {
@@ -233,6 +246,16 @@ pub mod stream_info {
     impl Display for Resolution {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "{:>5}x{:<5}", self.width, self.height)
+        }
+    }
+
+    impl Ord for Resolution {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            let width_cmp = self.width.cmp(&other.width);
+            match width_cmp {
+                std::cmp::Ordering::Equal => width_cmp,
+                _ => self.height.cmp(&other.height),
+            }
         }
     }
 }
