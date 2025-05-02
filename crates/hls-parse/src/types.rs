@@ -2,7 +2,8 @@
 
 // Types of media under tag #EXT-X-MEDIA
 pub mod media {
-    use std::{fmt::Display, str::FromStr};
+    use std::fmt::Display;
+    use std::str::FromStr;
 
     use anyhow::Context;
 
@@ -157,7 +158,7 @@ pub mod stream_info {
         pub frame_rate: f32,
         // TODO: use enum of common audio formats?
         pub audio_codec: String,
-        pub closed_captions: bool,
+        pub closed_captions: String,
     }
 
     impl Display for StreamInfo {

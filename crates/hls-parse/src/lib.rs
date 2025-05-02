@@ -3,6 +3,7 @@
 //! Provides data types that reflect HLS data (streams, media, etc.),
 //! and functions to parse raw data into those types.
 
+mod builders;
 mod parsers;
 pub mod types;
 
@@ -70,6 +71,7 @@ mod test {
     fn test_parse_no_data() {
         let data = "#EXTM3U
 #EXT-X-INDEPENDENT-SEGMENTS
+# other comment
 ";
         let _ = HlsPlaylist::from_str(data).unwrap();
     }
@@ -139,7 +141,7 @@ hdr10/unenc/10000k/vod.m3u8
                 average_bandwidth: 1762745,
                 frame_rate: 23.97,
                 audio_codec: "aac-128k".to_owned(),
-                closed_captions: false,
+                closed_captions: "NONE".to_owned(),
             }
         );
     }
