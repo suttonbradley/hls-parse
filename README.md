@@ -6,8 +6,8 @@ This Rust project is designed for parsing and viewing [HLS playlists](https://en
 
 ## How to run it
 _Assumes valid Rust toolchain install_.
-- Do `cargo run-sorter` which is equivalent to `cargo run` from `crates/hls-sort`
-- `cargo run-sorter -- -h` for sorting options, or to fetch a different playlist
+- Do `cargo run` from `crates/hls-sort`, or this workspace's alias: `cargo run-sorter`
+- `cargo run-sorter -- -h` for help (sorting options, fetching a playlist besides the default, etc.)
     - For example, `cargo run-sorter -- -v resolution` to sort video streams by resolution
 
 ## Technical Details
@@ -17,7 +17,11 @@ The parser uses [nom](https://docs.rs/nom/latest/nom/), a parser-combinator crat
 As pretty standard in Rust projects, the sorter uses [reqwest](https://docs.rs/reqwest/latest/reqwest/) for HTTP requests and [clap](https://docs.rs/clap/latest/clap/) for arg parsing.
 
 ### Priorities
-In this context, maximizing robustness and correctness was futile. I wanted to design the codebase to make it easy for someone else to jump in and understand the code, fix a bug, expand a type, add a parsing function, etc.
+Making the robustness and correctness of this parser match a production-grade one was not the purpose of this excercise. Instead, I wanted to design the codebase to make it easy for someone else to jump in and:
+- understand the code
+- fix a bug
+- expand a type
+- add parsing functionality
 
 ### Performance
 For the purposes of implementation time, this is _not_ a zero-copy parser. For a simpler implementation, input data is copied _once_ so that types that represent a serialized HLS playlist can _own_ the underlying data. Given more time, a future optimization of this parser could reference the underlying string data where possible and avoid copying.

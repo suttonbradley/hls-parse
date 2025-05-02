@@ -44,7 +44,6 @@ impl AudioBuilder {
     pub(crate) fn incorporate(mut self, param_tuple: (&str, &str)) -> Self {
         let (param_name, param_value) = param_tuple;
         match param_name {
-            // TODO: consts for these strings
             P_GROUP_ID => self.group_id = Some(param_value.to_owned()),
             P_NAME => self.name = Some(param_value.to_owned()),
             P_LANGUAGE => self.language = Some(param_value.to_owned()),
@@ -174,7 +173,6 @@ pub(crate) struct IframeStreamInfoBuilder {
 impl IframeStreamInfoBuilder {
     /// Consume self, producing Ok`IframeStreamInfo`) if required fields are present.
     pub(crate) fn build(self) -> anyhow::Result<IframeStreamInfo> {
-        // TODO: use .context, or just leave as Option
         Ok(IframeStreamInfo {
             common: self.common.build()?,
         })

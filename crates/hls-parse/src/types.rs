@@ -225,7 +225,6 @@ pub mod stream_info {
 
     #[derive(Debug, Default, Eq, PartialEq, PartialOrd)]
     pub struct Resolution {
-        // TODO: could represent as enum of common resolutions
         // TODO: could store as u16, as max reasonable value is ~8k
         pub width: usize,
         pub height: usize,
