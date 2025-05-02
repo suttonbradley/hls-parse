@@ -3,6 +3,7 @@
 
 use std::str::FromStr;
 
+use crate::constants::*;
 use crate::types::media::Audio;
 use crate::types::media::AudioChannelInfo;
 use crate::types::stream_info::IframeStreamInfo;
@@ -18,8 +19,6 @@ pub(crate) struct AudioBuilder {
     default: Option<bool>,
     auto_select: Option<bool>,
     channel_info: Option<AudioChannelInfo>,
-    /// URI of the audio stream the other metadata fields describe
-    // TODO: represent as http::uri::Uri ?
     uri: Option<String>,
 }
 
@@ -44,28 +43,26 @@ impl AudioBuilder {
         let (param_name, param_value) = param_tuple;
         match param_name {
             // TODO: consts for these strings
-            "GROUP-ID" => self.group_id = Some(param_value.to_owned()),
-            "NAME" => self.name = Some(param_value.to_owned()),
-            "LANGUAGE" => self.language = Some(param_value.to_owned()),
-            "DEFAULT" => {
-                self.default = Some(
-                    bool_from_param_str(param_value)
-                        .expect("failed to parse DEFAULT param from YES/NO value"),
-                )
+            P_GROUP_ID => self.group_id = Some(param_value.to_owned()),
+            P_NAME => self.name = Some(param_value.to_owned()),
+            P_LANGUAGE => self.language = Some(param_value.to_owned()),
+            P_DEFAULT => {
+                self.default = Some(bool_from_param_str(param_value).expect(
+                    format!("failed to parse {P_DEFAULT} param from YES/NO value").as_str(),
+                ))
             }
-            "AUTOSELECT" => {
-                self.auto_select = Some(
-                    bool_from_param_str(param_value)
-                        .expect("failed to parse AUTO-SELECT param from YES/NO value"),
-                )
+            P_AUTOSELECT => {
+                self.auto_select = Some(bool_from_param_str(param_value).expect(
+                    format!("failed to parse {P_AUTOSELECT} param from YES/NO value").as_str(),
+                ))
             }
-            "CHANNELS" => {
+            P_CHANNELS => {
                 self.channel_info = Some(
                     AudioChannelInfo::from_str(param_value)
-                        .expect("failed to parse CHANNEL-INFO param value"),
+                        .expect(format!("failed to parse {P_CHANNELS} param value").as_str()),
                 )
             }
-            "URI" => self.uri = Some(param_value.to_owned()),
+            P_URI => self.uri = Some(param_value.to_owned()),
             _ => unreachable!("unhandled param {param_name} passed from parser"),
         }
         self
@@ -98,19 +95,21 @@ impl StreamInfoCommonBuilder {
     fn incorporate(&mut self, param_tuple: (&str, &str)) -> anyhow::Result<()> {
         let (param_name, param_value) = param_tuple;
         match param_name {
-            "BANDWIDTH" => {
+            P_BANDWIDTH => {
                 self.bandwidth = Some(
-                    usize::from_str(param_value).expect("failed to parse BANDWIDTH param as int"),
+                    usize::from_str(param_value)
+                        .expect(format!("failed to parse {P_BANDWIDTH} param as int").as_str()),
                 )
             }
-            "CODECS" => self.codecs = Some(param_value.split(',').map(|x| x.to_owned()).collect()),
-            "RESOLUTION" => {
+            P_CODECS => self.codecs = Some(param_value.split(',').map(|x| x.to_owned()).collect()),
+            P_RESOLUTION => {
                 self.resolution = Some(
-                    Resolution::from_str(param_value).expect("failed to parse RESOLUTION param"),
+                    Resolution::from_str(param_value)
+                        .expect(format!("failed to parse {P_RESOLUTION} param").as_str()),
                 )
             }
-            "VIDEO-RANGE" => self.video_range = Some(param_value.to_owned()),
-            "URI" => self.uri = Some(param_value.to_owned()),
+            P_VIDEO_RANGE => self.video_range = Some(param_value.to_owned()),
+            P_URI => self.uri = Some(param_value.to_owned()),
             _ => anyhow::bail!("param not covered by common stream info"),
         }
         Ok(())
@@ -145,20 +144,19 @@ impl StreamInfoBuilder {
         let (param_name, param_value) = param_tuple;
         if let Err(_) = self.common.incorporate(param_tuple) {
             match param_name {
-                "AVERAGE-BANDWIDTH" => {
-                    self.average_bandwidth = Some(
-                        usize::from_str(param_value)
-                            .expect("failed to parse AVERAGE-BANDWIDTH param as int"),
-                    )
+                P_AVERAGE_BANDWIDTH => {
+                    self.average_bandwidth = Some(usize::from_str(param_value).expect(
+                        format!("failed to parse {P_AVERAGE_BANDWIDTH} param as int").as_str(),
+                    ))
                 }
-                "FRAME-RATE" => {
-                    self.frame_rate = Some(
-                        f32::from_str(param_value)
-                            .expect("failed to parse FRAME-RATE param as int"),
-                    )
+                P_FRAME_RATE => {
+                    self.frame_rate =
+                        Some(f32::from_str(param_value).expect(
+                            format!("failed to parse {P_FRAME_RATE} param as int").as_str(),
+                        ))
                 }
-                "AUDIO" => self.audio_codec = Some(param_value.to_owned()),
-                "CLOSED-CAPTIONS" => self.closed_captions = Some(param_value.to_owned()),
+                P_AUDIO => self.audio_codec = Some(param_value.to_owned()),
+                P_CLOSED_CAPTIONS => self.closed_captions = Some(param_value.to_owned()),
                 _ => unreachable!("unhandled param {param_name} passed from parser"),
             }
         }

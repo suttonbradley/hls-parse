@@ -17,6 +17,7 @@ use nom::{bytes::complete::tag, character::complete::multispace0};
 
 use crate::HlsPlaylist;
 use crate::builders::{AudioBuilder, IframeStreamInfoBuilder, StreamInfoBuilder};
+use crate::constants::*;
 
 type NomStrError<'a> = nom::error::Error<&'a str>;
 
@@ -69,7 +70,6 @@ pub(crate) fn parse_hls_playlist<'a>(data: &'a str) -> anyhow::Result<HlsPlaylis
     .parse(data)
     {
         Ok((_, components)) => components,
-        // TODO: ensure this works
         Err(e) => anyhow::bail!("{e}"),
     };
     for elt in components {
@@ -159,13 +159,13 @@ fn hls_audio<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     let (rest, builder) = fold_many1(
         alt((
             // TODO: repr GROUP-ID with enum given known-good set
-            comma_terminated_param("GROUP-ID", ParamEnclose::DoubleQuotes),
-            comma_terminated_param("NAME", ParamEnclose::DoubleQuotes),
-            comma_terminated_param("LANGUAGE", ParamEnclose::DoubleQuotes),
-            comma_terminated_param("DEFAULT", ParamEnclose::None),
-            comma_terminated_param("AUTOSELECT", ParamEnclose::None),
-            comma_terminated_param("CHANNELS", ParamEnclose::DoubleQuotes),
-            comma_terminated_param("URI", ParamEnclose::DoubleQuotes),
+            comma_terminated_param(P_GROUP_ID, ParamEnclose::DoubleQuotes),
+            comma_terminated_param(P_NAME, ParamEnclose::DoubleQuotes),
+            comma_terminated_param(P_LANGUAGE, ParamEnclose::DoubleQuotes),
+            comma_terminated_param(P_DEFAULT, ParamEnclose::None),
+            comma_terminated_param(P_AUTOSELECT, ParamEnclose::None),
+            comma_terminated_param(P_CHANNELS, ParamEnclose::DoubleQuotes),
+            comma_terminated_param(P_URI, ParamEnclose::DoubleQuotes),
         )),
         AudioBuilder::default,
         |builder, param_tuple| builder.incorporate(param_tuple),
@@ -188,14 +188,14 @@ fn hls_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     // Some params are enclosed by quotes and/or need conversion from the returned str value into another type.
     let (rest, mut builder) = fold_many1(
         alt((
-            comma_terminated_param("BANDWIDTH", ParamEnclose::None),
-            comma_terminated_param("AVERAGE-BANDWIDTH", ParamEnclose::None),
-            comma_terminated_param("CODECS", ParamEnclose::DoubleQuotes),
-            comma_terminated_param("RESOLUTION", ParamEnclose::None),
-            comma_terminated_param("FRAME-RATE", ParamEnclose::None),
-            comma_terminated_param("VIDEO-RANGE", ParamEnclose::None),
-            comma_terminated_param("AUDIO", ParamEnclose::DoubleQuotes),
-            comma_terminated_param("CLOSED-CAPTIONS", ParamEnclose::None),
+            comma_terminated_param(P_BANDWIDTH, ParamEnclose::None),
+            comma_terminated_param(P_AVERAGE_BANDWIDTH, ParamEnclose::None),
+            comma_terminated_param(P_CODECS, ParamEnclose::DoubleQuotes),
+            comma_terminated_param(P_RESOLUTION, ParamEnclose::None),
+            comma_terminated_param(P_FRAME_RATE, ParamEnclose::None),
+            comma_terminated_param(P_VIDEO_RANGE, ParamEnclose::None),
+            comma_terminated_param(P_AUDIO, ParamEnclose::DoubleQuotes),
+            comma_terminated_param(P_CLOSED_CAPTIONS, ParamEnclose::None),
         )),
         StreamInfoBuilder::default,
         |builder, param_tuple| builder.incorporate(param_tuple),
@@ -224,11 +224,11 @@ fn hls_iframe_stream_info<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     // Some params are enclosed by quotes and/or need conversion from the returned str value into another type.
     let (rest, builder) = fold_many1(
         alt((
-            comma_terminated_param("BANDWIDTH", ParamEnclose::None),
-            comma_terminated_param("CODECS", ParamEnclose::DoubleQuotes),
-            comma_terminated_param("RESOLUTION", ParamEnclose::None),
-            comma_terminated_param("VIDEO-RANGE", ParamEnclose::None),
-            comma_terminated_param("URI", ParamEnclose::DoubleQuotes),
+            comma_terminated_param(P_BANDWIDTH, ParamEnclose::None),
+            comma_terminated_param(P_CODECS, ParamEnclose::DoubleQuotes),
+            comma_terminated_param(P_RESOLUTION, ParamEnclose::None),
+            comma_terminated_param(P_VIDEO_RANGE, ParamEnclose::None),
+            comma_terminated_param(P_URI, ParamEnclose::DoubleQuotes),
         )),
         IframeStreamInfoBuilder::default,
         |builder, param_tuple| builder.incorporate(param_tuple),

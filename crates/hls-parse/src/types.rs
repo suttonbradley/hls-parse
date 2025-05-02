@@ -2,6 +2,8 @@
 
 // Types of media under tag #EXT-X-MEDIA
 pub mod media {
+    use crate::constants::*;
+
     use std::fmt::Display;
     use std::str::FromStr;
 
@@ -19,7 +21,7 @@ pub mod media {
             writeln!(
                 f,
                 "| {:^10} | {:^10} | {:^10} | {:^7} | {:^10} | {:^8} | {:^35} |",
-                "GROUP-ID", "NAME", "LANGUAGE", "DEFAULT", "AUTOSELECT", "CHANNELS", "URI"
+                P_GROUP_ID, P_NAME, P_LANGUAGE, P_DEFAULT, P_AUTOSELECT, P_CHANNELS, P_URI,
             )?;
             for i in self.inner.iter() {
                 writeln!(f, "{i}")?;
@@ -106,6 +108,8 @@ pub mod media {
 
 // Types for parsing #EXT-X-STREAM-INF
 pub mod stream_info {
+    use crate::constants::*;
+
     use std::{fmt::Display, str::FromStr};
 
     use anyhow::Context;
@@ -134,15 +138,15 @@ pub mod stream_info {
             writeln!(
                 f,
                 "| {:^10} | {:^17} | {:^30} | {:^11} | {:^10} | {:^11} | {:^10} | {:^15} | {:^30} |",
-                "BANDWIDTH",
-                "AVERAGE-BANDWIDTH",
-                "CODECS",
-                "RESOLUTION",
-                "FRAME-RATE",
-                "VIDEO-RANGE",
-                "AUDIO",
-                "CLOSED-CAPTIONS",
-                "URI"
+                P_BANDWIDTH,
+                P_AVERAGE_BANDWIDTH,
+                P_CODECS,
+                P_RESOLUTION,
+                P_FRAME_RATE,
+                P_VIDEO_RANGE,
+                P_AUDIO,
+                P_CLOSED_CAPTIONS,
+                P_URI,
             )?;
             for i in self.inner.iter() {
                 writeln!(f, "{i}")?;
@@ -191,7 +195,7 @@ pub mod stream_info {
             writeln!(
                 f,
                 "| {:^10} | {:^30} | {:^11} | {:^11} | {:^35} |",
-                "BANDWIDTH", "CODECS", "RESOLUTION", "VIDEO-RANGE", "URI"
+                P_BANDWIDTH, P_CODECS, P_RESOLUTION, P_VIDEO_RANGE, P_URI,
             )?;
             for i in self.inner.iter() {
                 writeln!(f, "{i}")?;

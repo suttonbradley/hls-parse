@@ -4,6 +4,7 @@
 //! and functions to parse raw data into those types.
 
 mod builders;
+mod constants;
 mod parsers;
 pub mod types;
 
