@@ -3,6 +3,8 @@
 
 use std::str::FromStr;
 
+use anyhow::Context;
+
 use crate::constants::*;
 use crate::types::media::Audio;
 use crate::types::media::AudioChannelInfo;
@@ -25,15 +27,15 @@ pub(crate) struct AudioBuilder {
 impl AudioBuilder {
     /// Consume self, producing Ok(`Audio`) if required fields are present.
     pub(crate) fn build(self) -> anyhow::Result<Audio> {
-        // TODO: use .context, or just leave as Option
+        let error_prefix = "missing HLS audio param ";
         Ok(Audio {
-            group_id: self.group_id.unwrap(),
-            name: self.name.unwrap(),
-            language: self.language.unwrap(),
-            default: self.default.unwrap(),
-            auto_select: self.auto_select.unwrap(),
-            channel_info: self.channel_info.unwrap(),
-            uri: self.uri.unwrap(),
+            group_id: self.group_id.with_context(|| format!("{error_prefix}{P_GROUP_ID}"))?,
+            name: self.name.with_context(|| format!("{error_prefix}{P_NAME}"))?,
+            language: self.language.with_context(|| format!("{error_prefix}{P_LANGUAGE}"))?,
+            default: self.default.with_context(|| format!("{error_prefix}{P_DEFAULT}"))?,
+            auto_select: self.auto_select.with_context(|| format!("{error_prefix}{P_AUTOSELECT}"))?,
+            channel_info: self.channel_info.with_context(|| format!("{error_prefix}{P_CHANNELS}"))?,
+            uri: self.uri.with_context(|| format!("{error_prefix}{P_URI}"))?,
         })
     }
 
@@ -80,13 +82,13 @@ pub(crate) struct StreamInfoCommonBuilder {
 
 impl StreamInfoCommonBuilder {
     fn build(self) -> anyhow::Result<StreamInfoCommon> {
-        // TODO: use .context, or just leave as Option
+        let error_prefix = "missing HLS video param ";
         Ok(StreamInfoCommon {
-            bandwidth: self.bandwidth.unwrap(),
-            codecs: self.codecs.unwrap(),
-            resolution: self.resolution.unwrap(),
-            video_range: self.video_range.unwrap(),
-            uri: self.uri.unwrap(),
+            bandwidth: self.bandwidth.with_context(|| format!("{error_prefix}{P_BANDWIDTH}"))?,
+            codecs: self.codecs.with_context(|| format!("{error_prefix}{P_CODECS}"))?,
+            resolution: self.resolution.with_context(|| format!("{error_prefix}{P_RESOLUTION}"))?,
+            video_range: self.video_range.with_context(|| format!("{error_prefix}{P_VIDEO_RANGE}"))?,
+            uri: self.uri.with_context(|| format!("{error_prefix}{P_URI}"))?,
         })
     }
 
@@ -128,13 +130,13 @@ pub(crate) struct StreamInfoBuilder {
 impl StreamInfoBuilder {
     /// Consume self, producing Ok(`StreamInfo`) if required fields are present.
     pub(crate) fn build(self) -> anyhow::Result<StreamInfo> {
-        // TODO: use .context, or just leave as Option
+        let error_prefix = "missing HLS video param ";
         Ok(StreamInfo {
             common: self.common.build()?,
-            average_bandwidth: self.average_bandwidth.unwrap(),
-            frame_rate: self.frame_rate.unwrap(),
-            audio_codec: self.audio_codec.unwrap(),
-            closed_captions: self.closed_captions.unwrap(),
+            average_bandwidth: self.average_bandwidth.with_context(|| format!("{error_prefix}{P_AVERAGE_BANDWIDTH}"))?,
+            frame_rate: self.frame_rate.with_context(|| format!("{error_prefix}{P_FRAME_RATE}"))?,
+            audio_codec: self.audio_codec.with_context(|| format!("{error_prefix}{P_AUDIO}"))?,
+            closed_captions: self.closed_captions.with_context(|| format!("{error_prefix}{P_CLOSED_CAPTIONS}"))?,
         })
     }
 
