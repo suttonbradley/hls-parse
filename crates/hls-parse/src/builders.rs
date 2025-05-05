@@ -13,6 +13,7 @@ use crate::types::stream_info::Resolution;
 use crate::types::stream_info::StreamInfo;
 use crate::types::stream_info::StreamInfoCommon;
 
+/// Builder proxy for `crate::types::media::Audio`
 #[derive(Default, Debug)]
 pub(crate) struct AudioBuilder {
     group_id: Option<String>,
@@ -70,6 +71,7 @@ impl AudioBuilder {
     }
 }
 
+/// Builder proxy for `crate::types::stream_info::StreamInfoCommon`
 #[derive(Debug, Default)]
 pub(crate) struct StreamInfoCommonBuilder {
     bandwidth: Option<usize>,
@@ -117,6 +119,7 @@ impl StreamInfoCommonBuilder {
     }
 }
 
+/// Builder proxy for `crate::types::stream_info::StreamInfo`
 #[derive(Debug, Default)]
 pub(crate) struct StreamInfoBuilder {
     pub(crate) common: StreamInfoCommonBuilder,
@@ -165,6 +168,7 @@ impl StreamInfoBuilder {
     }
 }
 
+/// Builder proxy for `crate::types::stream_info::IframeStreamInfo`
 #[derive(Debug, Default)]
 pub(crate) struct IframeStreamInfoBuilder {
     pub(crate) common: StreamInfoCommonBuilder,

@@ -23,7 +23,7 @@ type NomStrError<'a> = nom::error::Error<&'a str>;
 
 /// Holds possible HLS playlist elements for flexibility in parser return types.
 /// Outside of this module, use types from the `types` module directly instead.
-// OPTIMIZATION: Box contained types to reduce the size of this enum.
+// OPTIMIZATION: Box contained types to reduce the size of this enum?
 #[derive(Debug)]
 enum HlsElement {
     NoData,
@@ -34,7 +34,7 @@ enum HlsElement {
 }
 
 impl HlsElement {
-    /// Consumes self to contribute to the given HLS playlist.
+    /// Consumes self, moving it into the HLS playlist matching its variant.
     fn add_to_playlist(self, playlist: &mut HlsPlaylist) -> anyhow::Result<()> {
         match self {
             HlsElement::NoData => (),
@@ -87,7 +87,7 @@ fn extension_prefix<'a>() -> impl Parser<&'a str, Error = NomStrError<'a>> {
 }
 
 /// Parse an HLS comment. Anything that starts with `#`.
-/// Try other `hls_*` functions first, as this matches on `#EXT-X-*` lines.
+/// **Try other `hls_*` functions first**, as this matches on `#EXT-X-*` lines.
 fn hls_comment<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     map_res((tag("#"), not_line_ending, newline), |_| {
         Ok::<_, NomStrError<'a>>(HlsElement::NoData)
@@ -96,7 +96,7 @@ fn hls_comment<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
 }
 
 /// Parse a `#EXTM3U` header.
-/// Returns `HlsElement::NoData` on success. Modifies the input to "move past" the tag.
+/// Returns `HlsElement::NoData` on success. Modifies the input to move past the tag.
 fn hls_header<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     // Toss parser results, converting to `HlsElement::NoData` instead.
     map_res((tag("#EXTM3U"), multispace0), |_| {
@@ -123,6 +123,7 @@ fn hls_independent_segments<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     .parse(data)
 }
 
+/// Parse an HLS `#EXT-X-VERSION` param, returning the value as a `str` to be parsed to int later.
 fn hls_version<'a>(data: &'a str) -> IResult<&'a str, HlsElement> {
     // Toss parser results, converting to `HlsElement::NoData` instead.
     map_res(

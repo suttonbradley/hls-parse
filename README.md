@@ -37,6 +37,6 @@ _Where_ to look, and _what_ to look for:
 - `crates/hls-parse/src`:
     - `lib.rs`: Definiton of the overarching `HlsPlaylist` type, and tests
     - `types.rs`: Types that `HlsPlaylist` is composed of, to represent different tag/stream types
-    - `builders.rs`: Mirror of types in `types.rs` 
+    - `builders.rs`: Mirror of types in `types.rs`. Used during parsing, then converted to their mirror types.
     - `parsers.rs`: Parsing logic, including `nom` parser functions
 - `crates/hls-sort/src/main.rs`: Command line parsing and sorting logic

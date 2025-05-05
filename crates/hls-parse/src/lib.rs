@@ -10,11 +10,11 @@ pub mod types;
 
 use std::{fmt::Display, str::FromStr};
 
-#[derive(Default, Debug)]
 /// Represents a parsed HLS playlist, supporting various `#EXT-X-*` extensions.
+#[derive(Default, Debug)]
 pub struct HlsPlaylist {
     // FIXME: These fields contain `Vec`s wrapped in other types, in order to impl std::fmt::Display.
-    //        Unwrap these, for ergonomics (avoid `.inner`), and custom-implement the display of these types.
+    //        Unwrap these, for ergonomics (avoid `.inner`), and implement display of these types another way.
     pub audio_streams: types::media::AudioStreams,
     pub streams: types::stream_info::Streams,
     pub iframe_streams: types::stream_info::IframeStreams,
@@ -51,7 +51,7 @@ mod test {
 
     use super::*;
 
-    /// Just parse the sample input, without comparing parsed values.
+    /// Just parse the sample input from a file, without checking parsed values for correctness.
     #[test]
     fn test_parse_sample_input() {
         // Get contents of sample input file

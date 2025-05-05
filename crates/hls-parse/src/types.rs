@@ -1,4 +1,6 @@
-//! Types to represent HLS data, including descriptive tags with associated data.
+//! Types to represent parsed HLS data.
+//! These types, one per HLS playlist type, are the main point of consumption
+//! of the crate, used to view and evaluate parameters.
 
 // Types of media under tag #EXT-X-MEDIA
 pub mod media {
@@ -9,6 +11,7 @@ pub mod media {
 
     use anyhow::Context;
 
+    /// Collection of all iframe streams parsed from an HLS playlist
     #[derive(Debug, Default)]
     pub struct AudioStreams {
         pub inner: Vec<Audio>,
@@ -30,6 +33,7 @@ pub mod media {
         }
     }
 
+    /// Represents parsed audio stream metadata (`#EXT-X-MEDIA:TYPE=AUDIO`)
     #[derive(Debug, PartialEq)]
     pub struct Audio {
         pub group_id: String,
@@ -74,6 +78,7 @@ pub mod media {
         }
     }
 
+    /// Represents the parsed value of an audio stream's `CHANNELS` parameter
     #[derive(Debug, Eq, PartialEq, PartialOrd)]
     pub struct AudioChannelInfo {
         pub channels: usize,
@@ -126,6 +131,7 @@ pub mod stream_info {
         pub uri: String,
     }
 
+    /// Collection of all video streams parsed from an HLS playlist
     #[derive(Debug, Default)]
     pub struct Streams {
         pub inner: Vec<StreamInfo>,
@@ -155,6 +161,7 @@ pub mod stream_info {
         }
     }
 
+    /// Represents parsed video stream metadata (`#EXT-X-STREAM-INF`)
     #[derive(Debug, Default, PartialEq)]
     pub struct StreamInfo {
         pub common: StreamInfoCommon,
@@ -183,6 +190,7 @@ pub mod stream_info {
         }
     }
 
+    /// Collection of all iframe streams parsed from an HLS playlist
     #[derive(Debug, Default)]
     pub struct IframeStreams {
         pub inner: Vec<IframeStreamInfo>,
@@ -204,6 +212,7 @@ pub mod stream_info {
         }
     }
 
+    /// Represents parsed iframe stream metadata (`#EXT-X-I-FRAME-STREAM-INF`)
     #[derive(Debug, Default, PartialEq)]
     pub struct IframeStreamInfo {
         pub common: StreamInfoCommon,
@@ -223,6 +232,7 @@ pub mod stream_info {
         }
     }
 
+    /// Represents a parsed `RESOLUTION` parameter
     #[derive(Debug, Default, Eq, PartialEq, PartialOrd)]
     pub struct Resolution {
         // TODO: could store as u16, as max reasonable value is ~8k

@@ -1,3 +1,6 @@
+//! Constants used for HLS parsing.
+//! P_* are strs that match HLS parameter names.
+
 pub(crate) const P_AUDIO: &'static str = "AUDIO";
 pub(crate) const P_AUTOSELECT: &'static str = "AUTOSELECT";
 pub(crate) const P_AVERAGE_BANDWIDTH: &'static str = "AVERAGE-BANDWIDTH";
